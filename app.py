@@ -4,26 +4,14 @@ import math
 # Streamlit app title
 st.title("Multi-Calculator App")
 
-# Create tabs for the two calculators
-tab1, tab2 = st.tabs(["Sphere Mass Calculator", "Cylinder Volume Calculator"])
+# Define calculator categories and their calculators
+calculators = {
+    "Geometry": ["Sphere Mass Calculator", "Cylinder Volume Calculator"],
+    "Thermodynamics": ["Steam Saturation Temperature Calculator"]
+}
 
-# Shared conversion functions for length (used by both calculators)
-def convert_length(value, unit):
-    """Convert length to meters."""
-    if unit == "micron":
-        return value / 1_000_000  # 1 micron = 10^-6 m
-    elif unit == "mm":
-        return value / 1000  # 1 mm = 10^-3 m
-    elif unit == "cm":
-        return value / 100  # 1 cm = 10^-2 m
-    elif unit == "in":
-        return value * 0.0254  # 1 in = 0.0254 m
-    elif unit == "ft":
-        return value * 0.3048  # 1 ft = 0.3048 m
-    return value  # m
-
-# Tab 1: Sphere Mass Calculator
-with tab1:
+# Define calculator rendering functions
+def sphere_mass_calculator():
     # LaTeX equation and nomenclature
     st.markdown("### Equation")
     st.markdown("The mass of the sphere is calculated using the following equation:")
@@ -61,50 +49,51 @@ with tab1:
     with col5:
         mass_unit = st.selectbox("Mass Output Unit", mass_units, index=0, key="sphere_mass_unit")
 
-    # Conversion functions for density and mass
+    # Conversion functions
+    def convert_length(value, unit):
+        if unit == "micron":
+            return value / 1_000_000
+        elif unit == "mm":
+            return value / 1000
+        elif unit == "cm":
+            return value / 100
+        elif unit == "in":
+            return value * 0.0254
+        elif unit == "ft":
+            return value * 0.3048
+        return value
+
     def convert_density(value, unit):
-        """Convert density to kg/m³."""
         if unit == "g/ml":
-            return value * 1000  # 1 g/ml = 1 g/cm³ = 1000 kg/m³
+            return value * 1000
         elif unit == "lb/in³":
-            return value * 27679.90471  # 1 lb/in³ = 27679.90471 kg/m³
+            return value * 27679.90471
         elif unit == "lb/ft³":
-            return value * 16.01846337  # 1 lb/ft³ = 16.01846337 kg/m³
-        return value  # kg/m³
+            return value * 16.01846337
+        return value
 
     def convert_mass(value, unit):
-        """Convert mass from kg to desired unit."""
         if unit == "g":
-            return value * 1000  # 1 kg = 1000 g
+            return value * 1000
         elif unit == "lb":
-            return value * 2.2046226218  # 1 kg = 2.2046226218 lb
-        return value  # kg
+            return value * 2.2046226218
+        return value
 
     # Calculate mass
     if st.button("Calculate", key="sphere_calculate"):
         if diameter <= 0 or density <= 0:
             st.error("Diameter and density must be positive values.")
         else:
-            # Convert inputs to SI units
             diameter_m = convert_length(diameter, diameter_unit)
             density_kg_m3 = convert_density(density, density_unit)
-
-            # Calculate volume (m³)
             radius_m = diameter_m / 2
             volume = (4/3) * math.pi * (radius_m ** 3)
-
-            # Calculate mass (kg)
             mass_kg = density_kg_m3 * volume
-
-            # Convert mass to desired output unit
             mass_output = convert_mass(mass_kg, mass_unit)
-
-            # Display result in the third row
             with col5:
                 st.success(f"The mass of the sphere is {mass_output:.4f} {mass_unit}")
 
-# Tab 2: Cylinder Volume Calculator
-with tab2:
+def cylinder_volume_calculator():
     # LaTeX equation and nomenclature
     st.markdown("### Equation")
     st.markdown("The volume of the cylinder is calculated using the following equation:")
@@ -141,33 +130,149 @@ with tab2:
     with col11:
         volume_unit = st.selectbox("Volume Output Unit", volume_units, index=0, key="cylinder_volume_unit")
 
-    # Conversion function for volume
+    # Conversion functions
+    def convert_length(value, unit):
+        if unit == "micron":
+            return value / 1_000_000
+        elif unit == "mm":
+            return value / 1000
+        elif unit == "cm":
+            return value / 100
+        elif unit == "in":
+            return value * 0.0254
+        elif unit == "ft":
+            return value * 0.3048
+        return value
+
     def convert_volume(value, unit):
-        """Convert volume from m³ to desired unit."""
         if unit == "cm³":
-            return value * 1_000_000  # 1 m³ = 10^6 cm³
+            return value * 1_000_000
         elif unit == "in³":
-            return value * 61023.7441  # 1 m³ = 61023.7441 in³
+            return value * 61023.7441
         elif unit == "ft³":
-            return value * 35.3146667  # 1 m³ = 35.3146667 ft³
-        return value  # m³
+            return value * 35.3146667
+        return value
 
     # Calculate volume
     if st.button("Calculate", key="cylinder_calculate"):
         if height <= 0 or diameter_cyl <= 0:
             st.error("Height and diameter must be positive values.")
         else:
-            # Convert inputs to SI units
             height_m = convert_length(height, height_unit)
             diameter_m = convert_length(diameter_cyl, diameter_unit_cyl)
-
-            # Calculate volume (m³)
             radius_m = diameter_m / 2
             volume_m3 = math.pi * (radius_m ** 2) * height_m
-
-            # Convert volume to desired output unit
             volume_output = convert_volume(volume_m3, volume_unit)
-
-            # Display result in the third row
             with col11:
                 st.success(f"The volume of the cylinder is {volume_output:.4f} {volume_unit}")
+
+def steam_saturation_temperature_calculator():
+    # LaTeX equation and nomenclature
+    st.markdown("### Equation")
+    st.markdown("The saturation temperature of steam is approximated using the following equation:")
+    st.latex(r"T_{\text{sat}} = 100 \cdot \left( \frac{P}{0.6113} \right)^{0.25}")
+
+    st.markdown("### Nomenclature")
+    st.markdown(r"""
+    - $T_{\text{sat}}$: Saturation temperature of steam (°C)  
+    - $P$: Pressure (bar)
+    """)
+
+    # Define unit options (SI first, then smallest to largest)
+    pressure_units = ["bar", "kPa", "atm", "psi"]
+    temperature_units = ["°C", "°F", "K"]
+
+    # Layout inputs using columns
+    # Row 1: Pressure
+    col13, col14 = st.columns([2, 1])
+    with col13:
+        pressure = st.number_input("Pressure", min_value=0.0, value=1.0, step=0.1, key="steam_pressure")
+    with col14:
+        pressure_unit = st.selectbox("Pressure Unit", pressure_units, index=0, key="steam_pressure_unit")
+
+    # Row 2: Temperature output unit
+    col15, col16 = st.columns([2, 1])
+    with col15:
+        temperature_unit = st.selectbox("Temperature Output Unit", temperature_units, index=0, key="steam_temperature_unit")
+
+    # Conversion functions
+    def convert_pressure(value, unit):
+        """Convert pressure to bar."""
+        if unit == "kPa":
+            return value / 100  # 1 bar = 100 kPa
+        elif unit == "atm":
+            return value * 1.01325  # 1 atm = 1.01325 bar
+        elif unit == "psi":
+            return value * 0.0689476  # 1 psi = 0.0689476 bar
+        return value  # bar
+
+    def convert_temperature(value, unit):
+        """Convert temperature from °C to desired unit."""
+        if unit == "°F":
+            return (value * 9/5) + 32  # °C to °F
+        elif unit == "K":
+            return value + 273.15  # °C to K
+        return value  # °C
+
+    # Calculate saturation temperature
+    if st.button("Calculate", key="steam_calculate"):
+        if pressure <= 0:
+            st.error("Pressure must be a positive value.")
+        else:
+            pressure_bar = convert_pressure(pressure, pressure_unit)
+            # Approximate saturation temperature in °C
+            t_sat_c = 100 * (pressure_bar / 0.6113) ** 0.25
+            # Ensure temperature is physically realistic (e.g., above 0°C)
+            if t_sat_c < 0:
+                st.error("Pressure too low for this approximation.")
+            else:
+                t_sat_output = convert_temperature(t_sat_c, temperature_unit)
+                with col15:
+                    st.success(f"The saturation temperature is {t_sat_output:.2f} {temperature_unit}")
+
+# Map calculator names to their functions
+calculator_functions = {
+    "Sphere Mass Calculator": sphere_mass_calculator,
+    "Cylinder Volume Calculator": cylinder_volume_calculator,
+    "Steam Saturation Temperature Calculator": steam_saturation_temperature_calculator
+}
+
+# Sidebar: Search and Tree Structure
+st.sidebar.header("Calculator Navigation")
+
+# Search field
+search_term = st.sidebar.text_input("Search Calculators", "").lower()
+
+# Initialize session state for selected calculator
+if "selected_calculator" not in st.session_state:
+    st.session_state.selected_calculator = "Sphere Mass Calculator"  # Default to first calculator
+
+# Filter calculators based on search term
+filtered_calculators = {}
+for category, calc_list in calculators.items():
+    filtered_list = [calc for calc in calc_list if search_term in calc.lower()]
+    if filtered_list:
+        filtered_calculators[category] = filtered_list
+
+# Display tree structure with expanders
+if not filtered_calculators:
+    st.sidebar.write("No calculators match your search.")
+else:
+    for category, calc_list in filtered_calculators.items():
+        with st.sidebar.expander(category):
+            # Use radio buttons to select a calculator within the category
+            selected_calc = st.radio(
+                f"Select a {category} calculator",
+                calc_list,
+                index=calc_list.index(st.session_state.selected_calculator) if st.session_state.selected_calculator in calc_list else 0,
+                key=f"radio_{category}"
+            )
+            # Update session state when a calculator is selected
+            if selected_calc:
+                st.session_state.selected_calculator = selected_calc
+
+# Main panel: Display the selected calculator
+if st.session_state.selected_calculator in calculator_functions:
+    calculator_functions[st.session_state.selected_calculator]()
+else:
+    st.write("Please select a calculator from the sidebar.")
