@@ -1,8 +1,8 @@
 import streamlit as st
 import math
 
-# Streamlit app title
-st.title("Multi-Calculator App")
+# # Streamlit app title
+# st.title("Multi-Calculator App")
 
 # Define calculator categories and their calculators
 calculators = {
