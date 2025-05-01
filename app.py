@@ -5,18 +5,15 @@ import math
 st.title("Sphere Mass Calculator")
 
 # LaTeX equation and nomenclature
+st.markdown("### Equation")
+st.markdown("The mass of the sphere is calculated using the following equation:")
+st.latex(r"m = \rho \cdot \frac{4}{3} \pi \left( \frac{d}{2} \right)^3")
+
+st.markdown("### Nomenclature")
 st.markdown(r"""
-### Equation
-The mass of the sphere is calculated using the following equation:
-
-\[
-m = \rho \cdot \frac{4}{3} \pi \left( \frac{d}{2} \right)^3
-\]
-
-### Nomenclature
-- \( m \): Mass of the sphere
-- \( \rho \): Density of the sphere
-- \( d \): Diameter of the sphere
+- $m$: Mass of the sphere  
+- $\rho$: Density of the sphere  
+- $d$: Diameter of the sphere
 """)
 
 # Define unit options (SI first, then smallest to largest)
