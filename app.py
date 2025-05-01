@@ -7,7 +7,8 @@ st.title("Multi-Calculator App")
 # Define calculator categories and their calculators
 calculators = {
     "Geometry": ["Sphere Mass Calculator", "Cylinder Volume Calculator"],
-    "Thermodynamics": ["Steam Saturation Temperature Calculator"]
+    "Thermodynamics": ["Steam Saturation Temperature Calculator"],
+    "Particles": ["Particle Settling Velocity Calculator"]
 }
 
 # Define calculator rendering functions
@@ -26,7 +27,7 @@ def sphere_mass_calculator():
 
     # Define unit options (SI first, then smallest to largest)
     diameter_units = ["m", "micron", "mm", "cm", "in", "ft"]
-    density_units = ["kg/m³", "g/ml", "lb/in³", "lb/ft³"]
+    density_units = ["kg/m³", "g/cm³", "lb/ft³"]
     mass_units = ["kg", "g", "lb"]
 
     # Layout inputs using columns
@@ -64,10 +65,8 @@ def sphere_mass_calculator():
         return value
 
     def convert_density(value, unit):
-        if unit == "g/ml":
+        if unit == "g/cm³":
             return value * 1000
-        elif unit == "lb/in³":
-            return value * 27679.90471
         elif unit == "lb/ft³":
             return value * 16.01846337
         return value
@@ -226,11 +225,216 @@ def steam_saturation_temperature_calculator():
                 with col15:
                     st.success(f"The saturation temperature is {t_sat_output:.2f} {temperature_unit}")
 
+def particle_settling_velocity_calculator():
+    # Title and description
+    st.markdown("## Particle Settling Velocity")
+    st.markdown("This tool calculates the terminal settling velocity of a spherical particle")
+
+    # Define unit options (SI first, then smallest to largest)
+    length_units = ["m", "micron", "mm", "cm", "in", "ft"]
+    density_units = ["kg/m³", "g/cm³", "lb/ft³"]
+    viscosity_units = ["Pa·s", "cP", "lb/ft·s"]
+    time_units = ["s", "min", "hr"]
+    distance_units = ["m", "cm", "ft"]
+    velocity_units = ["m/s", "cm/s", "ft/s"]
+    dimensionless_units = ["Dimensionless"]
+
+    # Inputs
+    # Row 1: Particle Diameter
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        diameter = st.number_input("Particle Diameter", min_value=0.0, value=0.001, step=0.0001, key="particle_diameter")
+    with col2:
+        diameter_unit = st.selectbox("Diameter Unit", length_units, index=0, key="particle_diameter_unit")
+
+    # Row 2: Particle Density
+    col3, col4 = st.columns([2, 1])
+    with col3:
+        particle_density = st.number_input("Particle Density", min_value=0.0, value=2500.0, step=10.0, key="particle_density")
+    with col4:
+        particle_density_unit = st.selectbox("Particle Density Unit", density_units, index=0, key="particle_density_unit")
+
+    # Row 3: Fluid Density
+    col5, col6 = st.columns([2, 1])
+    with col5:
+        fluid_density = st.number_input("Fluid Density", min_value=0.0, value=1000.0, step=10.0, key="fluid_density")
+    with col6:
+        fluid_density_unit = st.selectbox("Fluid Density Unit", density_units, index=0, key="fluid_density_unit")
+
+    # Row 4: Fluid Viscosity
+    col7, col8 = st.columns([2, 1])
+    with col7:
+        fluid_viscosity = st.number_input("Fluid Viscosity", min_value=0.0, value=0.001, step=0.0001, key="fluid_viscosity")
+    with col8:
+        fluid_viscosity_unit = st.selectbox("Fluid Viscosity Unit", viscosity_units, index=0, key="fluid_viscosity_unit")
+
+    # Conversion functions
+    def convert_length(value, unit):
+        if unit == "micron":
+            return value / 1_000_000
+        elif unit == "mm":
+            return value / 1000
+        elif unit == "cm":
+            return value / 100
+        elif unit == "in":
+            return value * 0.0254
+        elif unit == "ft":
+            return value * 0.3048
+        return value
+
+    def convert_density(value, unit):
+        if unit == "g/cm³":
+            return value * 1000
+        elif unit == "lb/ft³":
+            return value * 16.01846337
+        return value
+
+    def convert_viscosity(value, unit):
+        if unit == "cP":
+            return value / 1000  # 1 cP = 0.001 Pa·s
+        elif unit == "lb/ft·s":
+            return value * 1.488164  # 1 lb/ft·s = 1.488164 Pa·s
+        return value
+
+    def convert_time(value, unit):
+        if unit == "min":
+            return value / 60  # s to min
+        elif unit == "hr":
+            return value / 3600  # s to hr
+        return value
+
+    def convert_distance(value, unit):
+        if unit == "cm":
+            return value * 100  # m to cm
+        elif unit == "ft":
+            return value * 3.28084  # m to ft
+        return value
+
+    def convert_velocity(value, unit):
+        if unit == "cm/s":
+            return value * 100  # m/s to cm/s
+        elif unit == "ft/s":
+            return value * 3.28084  # m/s to ft/s
+        return value
+
+    # Outputs (non-editable text boxes with unit dropdowns)
+    # Row 5: Reynolds Number
+    col9, col10 = st.columns([2, 1])
+    reynolds_value = st.session_state.get("particle_reynolds", "")
+    with col9:
+        st.text_input("Particle Reynolds Number at Terminal Velocity", value=str(reynolds_value), disabled=True, key="output_reynolds")
+    with col10:
+        reynolds_unit = st.selectbox("Reynolds Unit", dimensionless_units, index=0, key="reynolds_unit")
+
+    # Row 6: Drag Coefficient
+    col11, col12 = st.columns([2, 1])
+    drag_coeff_value = st.session_state.get("drag_coefficient", "")
+    with col11:
+        st.text_input("Drag Coefficient at Terminal Velocity", value=str(drag_coeff_value), disabled=True, key="output_drag_coeff")
+    with col12:
+        drag_coeff_unit = st.selectbox("Drag Coefficient Unit", dimensionless_units, index=0, key="drag_coeff_unit")
+
+    # Row 7: Time to Terminal Velocity
+    col13, col14 = st.columns([2, 1])
+    time_value = st.session_state.get("time_to_terminal", "")
+    with col13:
+        st.text_input("Time to Accelerate to Terminal Velocity", value=str(time_value), disabled=True, key="output_time")
+    with col14:
+        time_unit = st.selectbox("Time Unit", time_units, index=0, key="time_unit")
+
+    # Row 8: Distance Fallen
+    col15, col16 = st.columns([2, 1])
+    distance_value = st.session_state.get("distance_to_terminal", "")
+    with col15:
+        st.text_input("Distance Fallen to Reach Terminal Velocity", value=str(distance_value), disabled=True, key="output_distance")
+    with col16:
+        distance_unit = st.selectbox("Distance Unit", distance_units, index=0, key="distance_unit")
+
+    # Row 9: Terminal Velocity
+    col17, col18 = st.columns([2, 1])
+    velocity_value = st.session_state.get("terminal_velocity", "")
+    with col17:
+        st.text_input("Terminal Velocity", value=str(velocity_value), disabled=True, key="output_velocity")
+    with col18:
+        velocity_unit = st.selectbox("Velocity Unit", velocity_units, index=0, key="velocity_unit")
+
+    # Calculate terminal velocity
+    if st.button("Calculate", key="particle_calculate"):
+        if diameter <= 0 or particle_density <= 0 or fluid_density <= 0 or fluid_viscosity <= 0:
+            st.error("All inputs must be positive values.")
+        elif particle_density <= fluid_density:
+            st.error("Particle density must be greater than fluid density for the particle to settle.")
+        else:
+            # Convert inputs to SI units
+            d_m = convert_length(diameter, diameter_unit)
+            rho_p = convert_density(particle_density, particle_density_unit)
+            rho_f = convert_density(fluid_density, fluid_density_unit)
+            mu = convert_viscosity(fluid_viscosity, fluid_viscosity_unit)
+
+            # Constants
+            g = 9.81  # gravitational acceleration (m/s²)
+            dt = 0.001  # time step (s)
+            epsilon = 1e-6  # convergence criterion for velocity (m/s)
+
+            # Particle properties
+            volume = (4/3) * math.pi * (d_m / 2) ** 3
+            mass = rho_p * volume
+
+            # Forces
+            F_g = mass * g  # weight force
+            F_b = rho_f * volume * g  # buoyancy force
+            F_net_grav = F_g - F_b  # net gravitational force
+
+            # Simulation loop
+            v = 1e-12  # initial velocity (m/s)
+            z = 0  # initial position (m)
+            t = 0  # initial time (s)
+            while True:
+                # Calculate Reynolds number
+                Re_p = (rho_f * v * d_m) / mu if mu > 0 else 0
+
+                # Calculate drag coefficient (piecewise correlation)
+                if Re_p < 0.1:
+                    C_D = 24 / Re_p if Re_p > 0 else 0  # Stokes' Law
+                elif Re_p < 1000:
+                    C_D = (24 / Re_p) * (1 + 0.15 * Re_p ** 0.687)  # Intermediate regime
+                else:
+                    C_D = 0.44  # Newton's regime
+
+                # Calculate drag force
+                F_d = 0.5 * rho_f * v ** 2 * C_D * math.pi * (d_m / 2) ** 2
+
+                # Net force and acceleration
+                F_net = F_net_grav - F_d  # drag opposes gravity
+                a = F_net / mass if mass > 0 else 0
+
+                # Update velocity and position
+                v_new = v + a * dt
+                z += v * dt
+                t += dt
+
+                # Check for convergence
+                if abs(v_new - v) < epsilon:
+                    break
+
+                v = v_new
+
+            # Store results in session state for display
+            st.session_state.particle_reynolds = f"{Re_p:.4f}"
+            st.session_state.drag_coefficient = f"{C_D:.4f}"
+            st.session_state.time_to_terminal = f"{convert_time(t, time_unit):.4f}"
+            st.session_state.distance_to_terminal = f"{convert_distance(z, distance_unit):.4f}"
+            st.session_state.terminal_velocity = f"{convert_velocity(v, velocity_unit):.4f}"
+
+            # Force re-render to update output fields
+            st.rerun()
+
 # Map calculator names to their functions
 calculator_functions = {
     "Sphere Mass Calculator": sphere_mass_calculator,
     "Cylinder Volume Calculator": cylinder_volume_calculator,
-    "Steam Saturation Temperature Calculator": steam_saturation_temperature_calculator
+    "Steam Saturation Temperature Calculator": steam_saturation_temperature_calculator,
+    "Particle Settling Velocity Calculator": particle_settling_velocity_calculator
 }
 
 # Sidebar: Search and Tree Structure
