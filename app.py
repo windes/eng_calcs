@@ -1,8 +1,8 @@
 import streamlit as st
 import math
 
-# # Streamlit app title
-# st.title("Multi-Calculator App")
+# Streamlit app title
+st.title("Multi-Calculator App")
 
 # Define calculator categories and their calculators
 calculators = {
@@ -197,22 +197,20 @@ def steam_saturation_temperature_calculator():
 
     # Conversion functions
     def convert_pressure(value, unit):
-        """Convert pressure to bar."""
         if unit == "kPa":
-            return value / 100  # 1 bar = 100 kPa
+            return value / 100
         elif unit == "atm":
-            return value * 1.01325  # 1 atm = 1.01325 bar
+            return value * 1.01325
         elif unit == "psi":
-            return value * 0.0689476  # 1 psi = 0.0689476 bar
-        return value  # bar
+            return value * 0.0689476
+        return value
 
     def convert_temperature(value, unit):
-        """Convert temperature from °C to desired unit."""
         if unit == "°F":
-            return (value * 9/5) + 32  # °C to °F
+            return (value * 9/5) + 32
         elif unit == "K":
-            return value + 273.15  # °C to K
-        return value  # °C
+            return value + 273.15
+        return value
 
     # Calculate saturation temperature
     if st.button("Calculate", key="steam_calculate"):
@@ -220,9 +218,7 @@ def steam_saturation_temperature_calculator():
             st.error("Pressure must be a positive value.")
         else:
             pressure_bar = convert_pressure(pressure, pressure_unit)
-            # Approximate saturation temperature in °C
             t_sat_c = 100 * (pressure_bar / 0.6113) ** 0.25
-            # Ensure temperature is physically realistic (e.g., above 0°C)
             if t_sat_c < 0:
                 st.error("Pressure too low for this approximation.")
             else:
@@ -243,9 +239,13 @@ st.sidebar.header("Calculator Navigation")
 # Search field
 search_term = st.sidebar.text_input("Search Calculators", "").lower()
 
+# Clear selection button
+if st.sidebar.button("Clear Selection"):
+    st.session_state.selected_calculator = None
+
 # Initialize session state for selected calculator
 if "selected_calculator" not in st.session_state:
-    st.session_state.selected_calculator = "Sphere Mass Calculator"  # Default to first calculator
+    st.session_state.selected_calculator = None
 
 # Filter calculators based on search term
 filtered_calculators = {}
@@ -260,19 +260,17 @@ if not filtered_calculators:
 else:
     for category, calc_list in filtered_calculators.items():
         with st.sidebar.expander(category):
-            # Use radio buttons to select a calculator within the category
-            selected_calc = st.radio(
-                f"Select a {category} calculator",
-                calc_list,
-                index=calc_list.index(st.session_state.selected_calculator) if st.session_state.selected_calculator in calc_list else 0,
-                key=f"radio_{category}"
-            )
-            # Update session state when a calculator is selected
-            if selected_calc:
-                st.session_state.selected_calculator = selected_calc
+            for calc in calc_list:
+                # Use a button for each calculator
+                if st.button(calc, key=f"button_{calc}"):
+                    # Toggle selection: if already selected, deselect; otherwise, select
+                    if st.session_state.selected_calculator == calc:
+                        st.session_state.selected_calculator = None
+                    else:
+                        st.session_state.selected_calculator = calc
 
 # Main panel: Display the selected calculator
-if st.session_state.selected_calculator in calculator_functions:
+if st.session_state.selected_calculator and st.session_state.selected_calculator in calculator_functions:
     calculator_functions[st.session_state.selected_calculator]()
 else:
     st.write("Please select a calculator from the sidebar.")
