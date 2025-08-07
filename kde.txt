@@ -1,0 +1,128 @@
+import streamlit as st
+import numpy as np
+import pandas as pd
+from scipy.integrate import quad
+import plotly.graph_objects as go
+
+# Kernel functions
+def gaussian_kernel(u):
+    return (1 / np.sqrt(2 * np.pi)) * np.exp(-0.5 * u**2)
+
+def epanechnikov_kernel(u):
+    return np.where(np.abs(u) <= 1, 0.75 * (1 - u**2), 0)
+
+def uniform_kernel(u):
+    return np.where(np.abs(u) <= 1, 0.5, 0)
+
+def triangular_kernel(u):
+    return np.where(np.abs(u) <= 1, 1 - np.abs(u), 0)
+
+kernel_options = {
+    "Gaussian": gaussian_kernel,
+    "Epanechnikov": epanechnikov_kernel,
+    "Uniform": uniform_kernel,
+    "Triangular": triangular_kernel
+}
+
+# Bandwidth computation
+def compute_bandwidth(data, method):
+    n = len(data)
+    std = np.std(data, ddof=1)
+    if n <= 1:
+        return 1.0  # Default if insufficient data
+    if method == "scott":
+        return 1.059 * std * n**(-0.2)
+    elif method == "silverman":
+        return 0.9 * std * n**(-0.2)
+    else:
+        raise ValueError("Unknown bandwidth method")
+
+# KDE function
+def kde_func(x, data, h, kernel):
+    x = np.atleast_1d(x)
+    res = np.zeros(x.shape)
+    for i, xi in enumerate(x):
+        u = (xi - data) / h
+        res[i] = np.sum(kernel(u))
+    return res / (len(data) * h)
+
+# Main app
+st.title("Kernel Density Estimation Tool")
+
+# Data input
+st.header("Input Data")
+input_method = st.radio("Input method", ["Upload CSV", "Enter data manually"])
+
+data = None
+if input_method == "Upload CSV":
+    uploaded_file = st.file_uploader("Upload a CSV file (first column used as data)", type="csv")
+    if uploaded_file is not None:
+        df = pd.read_csv(uploaded_file)
+        if not df.empty:
+            data = df.iloc[:, 0].dropna().values
+            st.write(f"Loaded {len(data)} data points.")
+elif input_method == "Enter data manually":
+    text_input = st.text_area("Enter comma-separated numerical values")
+    if text_input:
+        try:
+            data = np.fromstring(text_input, sep=',')
+            st.write(f"Loaded {len(data)} data points.")
+        except:
+            st.error("Invalid input. Please enter comma-separated numbers.")
+
+if data is not None and len(data) > 0:
+    # KDE settings
+    st.header("KDE Settings")
+    selected_kernel = st.selectbox("Kernel function", list(kernel_options.keys()))
+    kernel = kernel_options[selected_kernel]
+
+    bw_method = st.selectbox("Bandwidth method", ["scott", "silverman", "manual"])
+    if bw_method == "manual":
+        h = st.number_input("Bandwidth (h)", min_value=0.01, value=1.0, step=0.1)
+    else:
+        h = compute_bandwidth(data, bw_method)
+        st.write(f"Computed bandwidth (h): {h:.4f}")
+
+    # Visualization
+    st.header("KDE Visualization")
+    if h > 0:
+        min_x = np.min(data) - 3 * h
+        max_x = np.max(data) + 3 * h
+        x_plot = np.linspace(min_x, max_x, 1000)
+        y_plot = kde_func(x_plot, data, h, kernel)
+
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=x_plot, y=y_plot, mode='lines', name='KDE'))
+        # Rug plot for data points
+        fig.add_trace(go.Scatter(x=data, y=[0]*len(data), mode='markers',
+                                 marker=dict(symbol='line-ns-open', size=10, color='black'),
+                                 name='Data points'))
+        fig.update_layout(xaxis_title="Value", yaxis_title="Density",
+                          height=500, showlegend=True)
+        st.plotly_chart(fig)
+    else:
+        st.error("Bandwidth must be positive.")
+
+    # Discrete histogram export
+    st.header("Export Discrete Histogram")
+    bin_text = st.text_area("Enter bin edges (comma-separated, sorted ascending)")
+    if bin_text:
+        try:
+            bins = np.fromstring(bin_text, sep=',')
+            if len(bins) < 2:
+                raise ValueError("Need at least two bin edges.")
+            if not np.all(np.diff(bins) > 0):
+                raise ValueError("Bin edges must be sorted ascending.")
+            integrals = []
+            for i in range(len(bins) - 1):
+                integ, _ = quad(lambda x: kde_func(x, data, h, kernel), bins[i], bins[i+1])
+                integrals.append(integ)
+            bin_centers = (bins[:-1] + bins[1:]) / 2
+            hist_df = pd.DataFrame({"bin_center": bin_centers, "height": integrals})
+            st.table(hist_df)
+            csv = hist_df.to_csv(index=False).encode('utf-8')
+            st.download_button("Download histogram CSV", csv, "kde_histogram.csv", "text/csv")
+        except Exception as e:
+            st.error(f"Error: {str(e)}")
+else:
+    st.info("Please input data to proceed.")
