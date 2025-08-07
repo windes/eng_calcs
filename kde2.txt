@@ -1,0 +1,97 @@
+import streamlit as st
+import pandas as pd
+import numpy as np
+import plotly.graph_objects as go
+from scipy.stats import gaussian_kde
+from io import StringIO
+
+st.set_page_config(page_title="Kernel Density Estimator", layout="centered")
+st.title("🔍 Kernel Density Estimation (KDE) Tool")
+
+# Input method selection
+input_method = st.radio("Select data input method:", ["Upload CSV", "Enter data manually"])
+
+data = None
+
+if input_method == "Upload CSV":
+    uploaded_file = st.file_uploader("Upload CSV file", type=["csv"])
+    if uploaded_file:
+        df = pd.read_csv(uploaded_file)
+        column = st.selectbox("Select column:", df.columns)
+        data = df[column].dropna().to_numpy()
+else:
+    manual_input = st.text_area(
+        "Enter numbers separated by commas or whitespace:",
+        "1, 2, 3, 4, 5, 6, 7, 8, 9"
+    )
+    try:
+        data = np.fromstring(manual_input, sep=',')
+        if data.size <= 1:
+            data = np.fromstring(manual_input, sep=' ')
+    except Exception:
+        st.warning("Invalid data format.")
+
+if data is not None and len(data) > 1:
+    st.markdown("### KDE Parameters")
+
+    # Kernel choices — scipy only supports Gaussian
+    kernel = st.selectbox("Kernel (only 'gaussian' supported by scipy)", options=["gaussian"])
+    
+    bw_method = st.radio("Bandwidth selection method:", ["Scott (default)", "Silverman", "Manual"])
+    if bw_method == "Manual":
+        bandwidth = st.number_input("Enter bandwidth value:", min_value=1e-6, value=0.5, step=0.01)
+        kde = gaussian_kde(data, bw_method=bandwidth)
+    else:
+        kde = gaussian_kde(data, bw_method=bw_method.lower())
+
+    # X-range and evaluation
+    x_min = st.number_input("X-axis minimum:", value=float(np.min(data)) - 1)
+    x_max = st.number_input("X-axis maximum:", value=float(np.max(data)) + 1)
+    x_vals = np.linspace(x_min, x_max, 1000)
+    y_vals = kde(x_vals)
+
+    # Plot KDE
+    st.markdown("### 📊 KDE Plot")
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=x_vals, y=y_vals, mode='lines', name='KDE'))
+    fig.add_trace(go.Histogram(x=data, histnorm='probability density', name='Histogram', opacity=0.5))
+    fig.update_layout(
+        xaxis_title="X",
+        yaxis_title="Density",
+        title="Kernel Density Estimate",
+        template="plotly_white"
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+    # Histogram Integration
+    st.markdown("### 📥 KDE to Discrete Histogram")
+
+    bin_input = st.text_area("Enter bin edges (comma-separated):", "0, 2, 4, 6, 8, 10")
+    try:
+        bins = np.fromstring(bin_input, sep=',')
+        if len(bins) < 2:
+            raise ValueError("Need at least 2 bin edges")
+        hist = []
+        for i in range(len(bins) - 1):
+            prob, _ = kde.integrate_box_1d(bins[i], bins[i+1]), bins[i+1] - bins[i]
+            hist.append(prob)
+        bin_centers = 0.5 * (bins[:-1] + bins[1:])
+        hist_df = pd.DataFrame({
+            "Bin Start": bins[:-1],
+            "Bin End": bins[1:],
+            "Bin Center": bin_centers,
+            "Probability": hist
+        })
+        st.dataframe(hist_df)
+
+        csv = hist_df.to_csv(index=False).encode()
+        st.download_button(
+            label="📥 Download Histogram CSV",
+            data=csv,
+            file_name="kde_histogram.csv",
+            mime="text/csv"
+        )
+    except Exception as e:
+        st.warning(f"Invalid bin input: {e}")
+else:
+    st.info("Please upload data or enter it manually to begin.")
